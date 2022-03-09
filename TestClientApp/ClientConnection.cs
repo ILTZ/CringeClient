@@ -80,7 +80,20 @@ namespace TestClientApp
 
         }
 
+        private string fromByteToString(ref Socket socket)
+        {
+            byte[] reciveData = new byte[256];
+            StringBuilder answerBuilder = new StringBuilder();
+            int bytes = 0;
 
+            do
+            {
+                bytes = socket.Receive(reciveData, reciveData.Length, 0);
+                answerBuilder.Append(Encoding.Unicode.GetString(reciveData, 0, bytes));
+            } while (socket.Available > 0);
+
+            return answerBuilder.ToString();
+        }
         public void serverAnsweresHandler()
         {
             while (!responesWillRecive)
@@ -89,52 +102,19 @@ namespace TestClientApp
                 {
                     return;
                 }
-                //ResponesFromServer resp = new ResponesFromServer();
-                //resp.initLists();
-                //bool endRespones = false;
-
-                //while (!endRespones)
-                //{
+ 
                 if (mainSocket.Available > 0)
                 {
-                    byte[] reciveData = new byte[256];
-                    StringBuilder answerBuilder = new StringBuilder();
-                    int bytes = 0;
+                   
+                    commanHandler(fromByteToString(ref mainSocket));
 
-                    do
-                    {
-                        bytes = mainSocket.Receive(reciveData, reciveData.Length, 0);
-                        answerBuilder.Append(Encoding.Unicode.GetString(reciveData, 0, bytes));
-                    } while (mainSocket.Available > 0);
-
-                    commanHandler(answerBuilder.ToString());
-                    //Console.WriteLine(count++);
-                    //Console.WriteLine(answerBuilder.ToString());
-
-                    /*     if (answerBuilder.ToString() == "go_bytes")
-                     {
-                         byteDataHandler(ref resp);
-                     }
-                         //printResponesData();
-
-                         if (answerBuilder.ToString() == "end_respones;")
-                         {
-                             endRespones = true;
-                         responesStotage.Add(resp);
-                             Console.WriteLine("Final");
-                         }
-
-                         sendMessageToServer("ready");
-                     }*/
-                    //}
+                    responesWillRecive = true;
                     printResponesData();
                 }
             }
 
             responesWillRecive = false;
         }
-
-  
 
         public void sendRequestToServer()
         {
@@ -206,50 +186,9 @@ namespace TestClientApp
                 }
                 else if (rowPart != "//")
                 {
-                    row += rowPart;
+                    row += rowPart + ';';
                 }
 
-            }
-        }
-
-        private void trueResponesHandler()
-        {
-            ResponesFromServer resp = new ResponesFromServer();
-            resp.initLists();
-            bool endRespones = false;
-            while (!endRespones)
-            {
-                sendMessageToServer("ready");
-
-                if (mainSocket.Available > 0)
-                {
-                    byte[] reciveData = new byte[256];
-                    StringBuilder answerBuilder = new StringBuilder();
-                    int bytes = 0;
-
-                    do
-                    {
-                        bytes = mainSocket.Receive(reciveData, reciveData.Length, 0);
-                        answerBuilder.Append(Encoding.Unicode.GetString(reciveData, 0, bytes));
-                    } while (mainSocket.Available > 0);
-
-                    string[] ans = answerBuilder.ToString().Split(';');
-
-                    if (ans[0] == "go_bytes")
-                    {
-                        byteDataHandler(ref resp);
-                    }
-                    else if (ans[0] == "end_respones")
-                    {
-                        endRespones = true;
-                        responesStotage.Add(resp);
-                        responesWillRecive = true;
-                    }
-                    else
-                    {
-                        responesStringFiller(ref ans, ref resp);
-                    }
-                }
             }
         }
 
@@ -275,17 +214,8 @@ namespace TestClientApp
 
                 messageWasSended = false;
 
-                    byte[] reciveData = new byte[256];
-                    StringBuilder answerBuilder = new StringBuilder();
-                    int bytes = 0;
 
-                    do
-                    {
-                        bytes = mainSocket.Receive(reciveData, reciveData.Length, 0);
-                        answerBuilder.Append(Encoding.Unicode.GetString(reciveData, 0, bytes));
-                    } while (mainSocket.Available > 0);
-
-                    string[] ans = answerBuilder.ToString().Split(';');
+                    string[] ans = fromByteToString(ref mainSocket).Split(';');        
 
                     if (ans[0] == "go_bytes")
                     {
@@ -302,49 +232,6 @@ namespace TestClientApp
                         responesStringFiller(ref ans, ref resp);
                     }
             }
-        }
-
-
-        private void byteDataHandler(ref ResponesFromServer _resp)
-        {
-            bool endBytes = false;
-            
-            while (!endBytes)
-            {
-                if (mainSocket.Connected)
-                {
-                    sendMessageToServer("ready");
-
-                    byte[] buffer = new byte[1024];
-                    int bytes = 0;
-
-                    byte[] reciveBytesData = new byte[0];
-
-                    MemoryStream ms = new MemoryStream();
-
-
-
-                    do
-                    {
-                        bytes = mainSocket.Receive(buffer, buffer.Length, 0);
-                        string f = Encoding.Unicode.GetString(buffer,0, bytes).ToString();
-                        if (((Encoding.Unicode.GetString(buffer, 0, bytes).ToString()) == "end_bytes;") ||  // Not always correct work but its fucking work b'lyat
-                            ((Encoding.Unicode.GetString(buffer, 0, bytes).ToString()) == "end_respones;")) 
-                        {
-                            endBytes = true;
-                            return;
-                        }
-
-                        ms.Write(buffer, 0, buffer.Length);
-
-                    } while (mainSocket.Available > 0);
-
-                    byte[] result = new byte[ms.Length];
-                    Array.Copy(ms.GetBuffer(), result, ms.Length);
-                    _resp.rowBytes.Add(result);
-                }
-            }
-
         }
 
         private void byteDataHandlerB(ref ResponesFromServer _resp)
@@ -375,8 +262,6 @@ namespace TestClientApp
                     byte[] reciveBytesData = new byte[0];
 
                     MemoryStream ms = new MemoryStream();
-
-
 
                     do
                     {
